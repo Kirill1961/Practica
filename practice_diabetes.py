@@ -82,91 +82,101 @@ df_rename.name = 'unique_samples'
 print('Num unique samples : \n', df.nunique())
 
 print(df_rename)
-#
-# """# Выделение переменных ◾ отбор категориальных, числовых
-#
-# MY ◾ Некорректный 🚫
-# * `Python фильтрация` нежелательно, только` pandas код`
-# """
-#
-# target= df['Diabetes_binary']
-#
-# dfu = df.nunique()
-#
-# # 1️️
-# num_var = [column for column, unique in zip(dfu.index, dfu) if unique > 2]
-#
-# # 2️⃣
-# # df.nunique() - это Series
-# num_var = df.nunique()[(df.nunique() > 2) & (target.name not in df.nunique().index) ].index
-#
-#
-#
-# # 1️️
-# bool_var = [column for column, unique in zip(df.nunique().index, df.nunique()) if unique == 2]
-# # 2️⃣
-# bool_var = [var for var in df.nunique().index if df.nunique()[var] == 2 and var != target.name]
-#
-#
-# print(num_var, '\n')
-# print(bool_var)
-#
-# """# ◻ HERE ◾ Отбор бинарных признаков
-# * Pandas фильтрация
-# """
-#
+
+"""# Выделение переменных ◾ отбор категориальных, числовых
+
+MY ◾ Некорректный 🚫
+* `Python фильтрация` нежелательно, только` pandas код`
+"""
+
+target = df['Diabetes_binary']
+
+dfu = df.nunique()
+
+# 1️️
+num_var = [column for column, unique in zip(dfu.index, dfu) if unique > 2]
+
+# 2️⃣
+# df.nunique() - это Series
+num_var = df.nunique()[(df.nunique() > 2) & (target.name not in df.nunique().index)].index
+
+
+
+# 1️️
+bool_var = [column for column, unique in zip(df.nunique().index, df.nunique()) if unique == 2]
+# 2️⃣
+bool_var = [var for var in df.nunique().index if df.nunique()[var] == 2 and var != target.name]
+
+
+print('num_var : \n', num_var, '\n')
+print('bool_var : \n', bool_var, '\n')
+print(df.CholCheck.value_counts())
+
+
+"""# ◻ HERE ◾ Отбор бинарных признаков
+* Pandas фильтрация
+"""
+
 # target = 'Diabetes_binary'
-#
-#
-# bool_var = df.nunique()[df.nunique() == 2].index.drop('Diabetes_binary')
-#
-# # Методом исключения и списка bool_var
-# num_var = [i for i in df.columns if i not in bool_var and i != target]
-#
-# print(num_var, '\n')
-# print(bool_var)
-#
-# """#  normalize=True
-#
-# * `value_counts(0)` — покажет `количество`.
-#
-# * `value_counts(1)` — покажет `доли`.
-#
-# #  .spines и .set_visible(False)
-#  * это настройка внешнего вида рамки графика
-#     * `.spines` -- Это границы (рамки) вокруг графика, и они представлены в виде словаря `{'top': Spine, 'bottom': Spine, 'left': Spine, 'right': Spin}`
-#     * `.spines[['top', 'right']] ` -- Это выбор конкретных рамок, например, верхней и правой.
-#     * `.set_visible(False)` -- Это метод, который отключает отображение этих рамок.
-#
+
+
+bool_var = df.nunique()[df.nunique() == 2].index.drop('Diabetes_binary')
+
+# Методом исключения и списка bool_var
+num_var = [i for i in df.columns if i not in bool_var and i != 'Diabetes_binary']
+
+print(num_var, '\n')
+print(bool_var)
+
+"""#  normalize=True
+
+* `value_counts(0)` — покажет `количество`.
+
+* `value_counts(1)` — покажет `доли`.
+
+#  .spines и .set_visible(False)
+ * это настройка внешнего вида рамки графика
+    * `.spines` -- Это границы (рамки) вокруг графика, и они представлены в виде словаря `{'top': Spine, 'bottom': Spine, 'left': Spine, 'right': Spin}`
+    * `.spines[['top', 'right']] ` -- Это выбор конкретных рамок, например, верхней и правой.
+    * `.set_visible(False)` -- Это метод, который отключает отображение этих рамок.
+
 # 1️⃣Способ Eduson
 # """
-#
-# df['Diabetes_binary'].value_counts(1).plot(kind='barh',figsize=(10, 2),
-#                                            color='#53AEFF').spines[['top', 'right']].set_visible(True);
-# plt.title('Diabetes_binary Distribution (%)', fontsize=10)
-# plt.yticks(ticks=[0,1], labels=['Non-Diabetic', 'Diabetic']);
-#
-# """2️⃣ Способ GPT - Правильно
-# * `ax.spines` --- `раздельно`
-# """
-#
-# ax = df['Diabetes_binary'].value_counts(1).plot(kind='barh', figsize=(10, 2), color='#FF851B')
-# ax.spines['top'].set_visible(False)
-# ax.spines['right'].set_visible(False)
-#
-# """# corrwith ◾ мера линейной связи признаков с целевой"""
-#
-# df.drop(target, axis=1)
-#
-# (df.drop(target, axis=1)  # DF без целевой
-#    .corrwith(df.Diabetes_binary)
-#    .sort_values(ascending=False)
-#    .plot(kind='bar', figsize=(12, 4), title="Diabetes_binary Correlation", alpha=0.8, zorder=3, color='#2E8CE3')
-#    .spines[['top','right', 'left']].set_visible(False)
-#    )
-# plt.grid(axis='y', linestyle='--', alpha=.5)
-# plt.xticks(rotation = 45, ha='right', size=10);
-#
+
+df['Diabetes_binary'].value_counts(1).plot(kind='barh',figsize=(10, 2),
+                                           color='#53AEFF').spines[['top', 'right']].set_visible(True);
+plt.title('Diabetes_binary Distribution (%)', fontsize=10)
+plt.yticks(ticks=[0,1], labels=['Non-Diabetic', 'Diabetic']);
+# plt.show()
+
+
+"""2️⃣ Способ GPT - Правильно
+* `ax.spines` --- `раздельно`
+"""
+
+ax = df['Diabetes_binary'].value_counts(1).plot(kind='barh', figsize=(10, 2), color='#FF851B')
+ax.spines['top'].set_visible(False)
+ax.spines['right'].set_visible(False)
+# plt.show()
+
+
+"""# corrwith ◾ мера линейной связи признаков с целевой"""
+
+
+
+# print(df.drop('Diabetes_binary', axis=1).columns)
+
+(df.drop('Diabetes_binary', axis=1)  # DF без целевой
+   .corrwith(target)
+   .sort_values(ascending=False)
+   .plot(kind='bar', figsize=(12, 4), title="Diabetes_binary Correlation", alpha=0.8, zorder=3, color='#2E8CE3')
+   .spines[['top','right', 'left']].set_visible(False)
+   )
+plt.grid(axis='y', linestyle='--', alpha=.5)
+plt.xticks(rotation=45, ha='right', size=10)
+# plt.show()
+
+
 # """# corrwith ◾ Корреляция DF с таргетом + сортировка
 # `corrwith` --- `Степень линейной связи`, Корреляция DF с таргетом
 # * `corrwith` - возвращает `Series`, поэтому соответствующие методы
