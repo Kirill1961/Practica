@@ -6,7 +6,7 @@ pd.set_option('display.width', 1000)       # Увеличивает ширину
 from catboost.datasets import amazon
 amazon_train, amazon_test = amazon()
 
-print(amazon_train.describe().T)
+print(amazon_train.head(3))
 print(amazon_train.info())
 
 print(amazon_train.nunique(axis=0))
