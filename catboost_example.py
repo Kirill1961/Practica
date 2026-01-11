@@ -64,7 +64,7 @@ model = CatBoostClassifier(
     # ключевое для нашей темы
     cat_features=cat_features,
 
-    # чтобы было видно обучение
+    # чтобы было видно обучение, с шагом 50 строк лога
     verbose=50,
 
     # фиксируем random seed (перестановки!)
@@ -88,5 +88,6 @@ importances = pd.Series(
     index=X.columns
 ).sort_values(ascending=False)
 
-importances.head(10)
+print(importances.head(10))
 
+print('Grad in leaf : \n', model.get_leaf_values().shape)
