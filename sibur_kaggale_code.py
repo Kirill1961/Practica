@@ -34,27 +34,27 @@ from statsmodels.tsa.seasonal import seasonal_decompose, STL
 #%%
 # TODO data train test target
 
-df_tr = pd.read_csv("D:\Eduson_data\sibur_train_features.csv")
-
-df_ts = pd.read_csv("D:\Eduson_data\sibur_test_features.csv")
-
-df_tg = pd.read_csv("D:\Eduson_data\sibur_train_targets.csv")
-
-df_sb = pd.read_csv("D:\Eduson_data\sibur_sample_submission.csv")
-
-print("train :\n", df_tr.columns, "\n")
-print("test  :\n", df_ts.columns, "\n")
-print("target :\n", df_tg.columns, "\n")
-print(
-    f" train : {df_tr.shape} \n test : {df_ts.shape}"
-    f" \n target : {df_tg.shape} \n submisiion : {df_sb.shape}",
-    "\n",
-)
-
-print("infer_freq :\n", pd.infer_freq(df_tr["timestamp"]), "\n")
-
-df2 = pd.DataFrame(np.arange(1, 46).reshape(-1, 3), columns=list("ABC"))
-df3 = pd.DataFrame(np.arange(1, 301).reshape(-1, 3), columns=list("ABC"))
+# df_tr = pd.read_csv("D:\Eduson_data\sibur_train_features.csv")
+#
+# df_ts = pd.read_csv("D:\Eduson_data\sibur_test_features.csv")
+#
+# df_tg = pd.read_csv("D:\Eduson_data\sibur_train_targets.csv")
+#
+# df_sb = pd.read_csv("D:\Eduson_data\sibur_sample_submission.csv")
+#
+# print("train :\n", df_tr.columns, "\n")
+# print("test  :\n", df_ts.columns, "\n")
+# print("target :\n", df_tg.columns, "\n")
+# print(
+#     f" train : {df_tr.shape} \n test : {df_ts.shape}"
+#     f" \n target : {df_tg.shape} \n submisiion : {df_sb.shape}",
+#     "\n",
+# )
+#
+# print("infer_freq :\n", pd.infer_freq(df_tr["timestamp"]), "\n")
+#
+# df2 = pd.DataFrame(np.arange(1, 46).reshape(-1, 3), columns=list("ABC"))
+# df3 = pd.DataFrame(np.arange(1, 301).reshape(-1, 3), columns=list("ABC"))
 
 
 #%%
@@ -265,10 +265,10 @@ def restore_percent(data):
 # TODO 2 часть: подготовка данных с новыми адаптивными сдвигами
 
 # загрузка данных
-raw_train = df_tr
-raw_test = df_ts
-sample = df_sb
-raw_targets = df_tg
+raw_train = pd.read_csv("D:\Eduson_data\sibur_train_features.csv")
+raw_test = pd.read_csv("D:\Eduson_data\sibur_test_features.csv")
+sample = pd.read_csv("D:\Eduson_data\sibur_sample_submission.csv")
+raw_targets = pd.read_csv("D:\Eduson_data\sibur_train_targets.csv")
 
 # удаление временных промежутков, в таргетах он нам нужен для мержда с основным пайплайном
 raw_train.drop('timestamp', axis=1, inplace=True)
@@ -294,13 +294,13 @@ start = time.time()
 features['A_rate'], features['B_rate'] = A_B_rate_restore(features['A_rate'], features['B_rate'], 500, 10)
 
 features['A_CH4'] = chemical_data_restore(features['A_CH4'], 500, 20, 100, 9)
-# features['A_C2H6'] = chemical_data_restore(features['A_C2H6'], 400, 20, 100, 10)
-# features['A_C3H8'] = chemical_data_restore(features['A_C3H8'], 500, 20, 100, 14)
-# features['A_iC4H10'] = chemical_data_restore(features['A_iC4H10'], 500, 20, 100, 11)
-# features['A_nC4H10'] = chemical_data_restore(features['A_nC4H10'], 500, 20, 100, 11)
-# features['A_iC5H12'] = chemical_data_restore(features['A_iC5H12'], 400, 20, 100, 8)
-# features['A_nC5H12'] = chemical_data_restore(features['A_nC5H12'], 400, 20, 100, 9)
-# features['A_C6H14'] = chemical_data_restore(features['A_C6H14'], 500, 20, 100, 18)
+features['A_C2H6'] = chemical_data_restore(features['A_C2H6'], 400, 20, 100, 10)
+features['A_C3H8'] = chemical_data_restore(features['A_C3H8'], 500, 20, 100, 14)
+features['A_iC4H10'] = chemical_data_restore(features['A_iC4H10'], 500, 20, 100, 11)
+features['A_nC4H10'] = chemical_data_restore(features['A_nC4H10'], 500, 20, 100, 11)
+features['A_iC5H12'] = chemical_data_restore(features['A_iC5H12'], 400, 20, 100, 8)
+features['A_nC5H12'] = chemical_data_restore(features['A_nC5H12'], 400, 20, 100, 9)
+features['A_C6H14'] = chemical_data_restore(features['A_C6H14'], 500, 20, 100, 18)
 
 end = time.time()
 print(end - start)
@@ -468,13 +468,13 @@ start = time.time()
 raw_train['A_rate'], raw_train['B_rate'] = A_B_rate_restore(raw_train['A_rate'], raw_train['B_rate'], 1000, 12)
 
 raw_train['A_CH4'] = chemical_data_restore(raw_train['A_CH4'], 500, 20, 100, 10)
-# raw_train['A_C2H6'] = chemical_data_restore(raw_train['A_C2H6'], 500, 20, 100, 14)
-# raw_train['A_C3H8'] = chemical_data_restore(raw_train['A_C3H8'], 500, 20, 100, 15)
-# raw_train['A_iC4H10'] = chemical_data_restore(raw_train['A_iC4H10'], 500, 20, 100, 11)
-# raw_train['A_nC4H10'] = chemical_data_restore(raw_train['A_nC4H10'], 500, 20, 100, 11)
-# raw_train['A_iC5H12'] = chemical_data_restore(raw_train['A_iC5H12'], 500, 20, 100, 7)
-# raw_train['A_nC5H12'] = chemical_data_restore(raw_train['A_nC5H12'], 400, 20, 100, 9)
-# raw_train['A_C6H14'] = chemical_data_restore(raw_train['A_C6H14'], 500, 20, 100, 18)
+raw_train['A_C2H6'] = chemical_data_restore(raw_train['A_C2H6'], 500, 20, 100, 14)
+raw_train['A_C3H8'] = chemical_data_restore(raw_train['A_C3H8'], 500, 20, 100, 15)
+raw_train['A_iC4H10'] = chemical_data_restore(raw_train['A_iC4H10'], 500, 20, 100, 11)
+raw_train['A_nC4H10'] = chemical_data_restore(raw_train['A_nC4H10'], 500, 20, 100, 11)
+raw_train['A_iC5H12'] = chemical_data_restore(raw_train['A_iC5H12'], 500, 20, 100, 7)
+raw_train['A_nC5H12'] = chemical_data_restore(raw_train['A_nC5H12'], 400, 20, 100, 9)
+raw_train['A_C6H14'] = chemical_data_restore(raw_train['A_C6H14'], 500, 20, 100, 18)
 
 end = time.time()
 print(end - start)
@@ -539,10 +539,10 @@ none = pd.Series([None] * 14).T
 for i in range(final_data.shape[0] * 2 - 1):
 
     if i % 2 == 0:
-        valid_data = valid_data.append(final_data.iloc[j])
+        valid_data = valid_data._append(final_data.iloc[j])
         j += 1
     else:
-        valid_data = valid_data.append(none, ignore_index=True)
+        valid_data = valid_data._append(none, ignore_index=True)
 
 # отрезаем появившиеся лишние признаки
 valid_data = valid_data.iloc[:, :14]
@@ -634,15 +634,15 @@ for num, target in enumerate(final_targets.columns):
 print()
 print('total_loss', round(total_loss, 5) / 4)
 
-'''
->>>
-B_C2H6  4.15904
-B_C3H8  1.92389
-B_iC4H10  1.26067
-B_nC4H10  1.01302
-
-total_loss 2.0891525
-'''
+# '''
+# >>>
+# B_C2H6  4.15904
+# B_C3H8  1.92389
+# B_iC4H10  1.26067
+# B_nC4H10  1.01302
+#
+# total_loss 2.0891525
+# '''
 
 #%%
 submission.to_csv('combinated_version_v_6.csv', index=False)
