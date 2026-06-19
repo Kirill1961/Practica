@@ -23,13 +23,17 @@ import time
 from sklearn.linear_model import Ridge
 from scipy.signal import find_peaks, peak_prominences
 import matplotlib
+
 matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt
 import seaborn as sns
+
 plt.style.use('seaborn-v0_8-bright')
 from statsmodels.tsa.stattools import acf, pacf, ccf
 from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
 from statsmodels.tsa.seasonal import seasonal_decompose, STL
+
+from etna.datasets.tsdataset import TSDataset
 
 #%%
 # TODO 1 часть: функции
@@ -96,7 +100,6 @@ def A_B_rate_restore(a_rate, b_rate, window, sigma):
             if abs(b_rate[n] - result_b[n - 1]) > resid_mean_b + resid_std_b * sigma:
                 b_rate[n] = None
 
-
         if pd.isnull(a_rate[n]) and pd.isnull(b_rate[n]):
             result_a.append(mean_a_gup)
             result_b.append(mean_b_gup)
@@ -112,7 +115,6 @@ def A_B_rate_restore(a_rate, b_rate, window, sigma):
 
         elif pd.isnull(b_rate[n]):
 
-
             model = Ridge()
             model.fit(np.array(result_a[-3000:]).reshape(-1, 1), result_b[-3000:])
             result_b.append(model.predict(np.array(a_rate[n]).reshape(-1, 1))[0])
@@ -127,9 +129,6 @@ def A_B_rate_restore(a_rate, b_rate, window, sigma):
     return pd.Series(result_a), pd.Series(result_b)
 
 
-
-
-
 #%%
 def chemical_data_restore(series, window, window_mean, window_resid, sigma):
     """
@@ -139,12 +138,9 @@ def chemical_data_restore(series, window, window_mean, window_resid, sigma):
     """
     series = series.copy()
 
-
     result = [series[0]]
 
-
     for n in range(1, len(series)):
-
 
         mean_gup = np.array(result[-window_mean:]).mean()
 
@@ -152,10 +148,8 @@ def chemical_data_restore(series, window, window_mean, window_resid, sigma):
 
         mean_gup += resid_gup
 
-
         resid_mean = abs(pd.Series(result[-window:]) - pd.Series(result[-window:]).shift(1)).mean()
         resid_std = abs(pd.Series(result[-window:]) - pd.Series(result[-window:]).shift(1)).std()
-
 
         if n < window:
             pass
@@ -163,7 +157,6 @@ def chemical_data_restore(series, window, window_mean, window_resid, sigma):
 
             if abs(series[n] - result[n - 1]) > resid_mean + resid_std * sigma:
                 series[n] = None
-
 
         if pd.isnull(series[n]):
             result.append(mean_gup)
@@ -193,7 +186,6 @@ def restore_percent(data):
 
     outlier_indexes = data[(data['sum'] > 99.99) | (data['sum'] < 99.92)].index
 
-
     for feat in range(1, 9):
         data.iloc[outlier_indexes, feat] = data.iloc[outlier_indexes, feat] * data.iloc[outlier_indexes, -1]
 
@@ -208,8 +200,6 @@ raw_test = pd.read_csv("D:\Eduson_data\sb_test_features.csv")
 raw_targets = pd.read_csv("D:\Eduson_data\sb_train_targets.csv")
 sample = pd.read_csv("D:\Eduson_data\sb_sample_submission.csv")
 
-
-
 raw_train.drop('timestamp', axis=1, inplace=True)
 raw_test.drop('timestamp', axis=1, inplace=True)
 # raw_targets.drop('timestamp', axis=1, inplace=True)
@@ -218,9 +208,7 @@ raw_test.drop('timestamp', axis=1, inplace=True)
 data = pd.concat([raw_train, raw_targets], axis=1)
 data = pd.concat([data, raw_test], axis=0).reset_index(drop=True)
 
-
 data = data[2200:].reset_index(drop=True)
-
 
 features = data.iloc[:, :10]
 targets = data.iloc[:, 10:]
@@ -232,13 +220,13 @@ start = time.time()
 features['A_rate'], features['B_rate'] = A_B_rate_restore(features['A_rate'], features['B_rate'], 500, 10)
 
 features['A_CH4'] = chemical_data_restore(features['A_CH4'], 500, 20, 100, 9)
-# features['A_C2H6'] = chemical_data_restore(features['A_C2H6'], 400, 20, 100, 10)
-# features['A_C3H8'] = chemical_data_restore(features['A_C3H8'], 500, 20, 100, 14)
-# features['A_iC4H10'] = chemical_data_restore(features['A_iC4H10'], 500, 20, 100, 11)
-# features['A_nC4H10'] = chemical_data_restore(features['A_nC4H10'], 500, 20, 100, 11)
-# features['A_iC5H12'] = chemical_data_restore(features['A_iC5H12'], 400, 20, 100, 8)
-# features['A_nC5H12'] = chemical_data_restore(features['A_nC5H12'], 400, 20, 100, 9)
-# features['A_C6H14'] = chemical_data_restore(features['A_C6H14'], 500, 20, 100, 18)
+features['A_C2H6'] = chemical_data_restore(features['A_C2H6'], 400, 20, 100, 10)
+features['A_C3H8'] = chemical_data_restore(features['A_C3H8'], 500, 20, 100, 14)
+features['A_iC4H10'] = chemical_data_restore(features['A_iC4H10'], 500, 20, 100, 11)
+features['A_nC4H10'] = chemical_data_restore(features['A_nC4H10'], 500, 20, 100, 11)
+features['A_iC5H12'] = chemical_data_restore(features['A_iC5H12'], 400, 20, 100, 8)
+features['A_nC5H12'] = chemical_data_restore(features['A_nC5H12'], 400, 20, 100, 9)
+features['A_C6H14'] = chemical_data_restore(features['A_C6H14'], 500, 20, 100, 18)
 
 end = time.time()
 print(end - start)
@@ -261,7 +249,6 @@ new_features.iloc[:, :] = 0
 new_targets = targets.copy()
 new_targets.iloc[:, :] = 0
 
-
 for i in range(features.shape[0]):
     if i < 250:
         new_features.iloc[i] = features.iloc[0]
@@ -276,7 +263,6 @@ for i in range(features.shape[0]):
 
         new_targets.iloc[i] = targets.iloc[i]
 
-
 new_features = new_features.iloc[:, :10]
 new_features = new_features.reset_index(drop=True)
 new_targets = new_targets.reset_index(drop=True)
@@ -284,25 +270,19 @@ new_targets = new_targets.reset_index(drop=True)
 new_features = new_features[250:].reset_index(drop=True)
 new_targets = new_targets[250:].reset_index(drop=True)
 
-
 new_features = new_features.drop(range(2250, 2450), axis=0).reset_index(drop=True)
 new_targets = new_targets.drop(range(2250, 2450), axis=0).reset_index(drop=True)
-
 
 new_features = new_features.drop(range(1290, 1440), axis=0).reset_index(drop=True)
 new_targets = new_targets.drop(range(1290, 1440), axis=0).reset_index(drop=True)
 
-
 test = new_features[-3984:].reset_index(drop=True)
-
 
 data = pd.concat([new_features, new_targets], axis=1).dropna(
     subset=['B_C2H6', 'B_C3H8', 'B_iC4H10', 'B_nC4H10']).reset_index(drop=True)
 
-
 new_features = data.iloc[:, :11].reset_index(drop=True)
 new_targets = data.iloc[:, 11:].reset_index(drop=True)
-
 
 train = new_features.copy()
 train_targets = new_targets.copy()
@@ -313,7 +293,6 @@ raw_train = pd.read_csv("D:\Eduson_data\sb_train_features.csv")
 raw_test = pd.read_csv("D:\Eduson_data\sb_test_features.csv")
 raw_targets = pd.read_csv("D:\Eduson_data\sb_train_targets.csv")
 
-
 raw_train.drop('timestamp', axis=1, inplace=True)
 raw_test.drop('timestamp', axis=1, inplace=True)
 # raw_targets.drop('timestamp', axis=1, inplace=True)
@@ -323,15 +302,12 @@ full_size = 9792
 size_test = 3984 + shift
 size_train = full_size - size_test
 
-
 data = pd.concat([raw_train, raw_targets], axis=1)
 data = pd.concat([data, raw_test], axis=0)
-
 
 data = pd.concat([data.iloc[:, :9].reset_index(drop=True),
                   data.iloc[1:, 9].reset_index(drop=True),
                   data.iloc[shift:, 10:].reset_index(drop=True)], axis=1)
-
 
 raw_train = data.iloc[:size_train, :10].reset_index(drop=True)
 raw_targets = data.iloc[:size_train, 10:].reset_index(drop=True)
@@ -340,11 +316,9 @@ raw_test = data.iloc[size_train:-shift, :10].reset_index(drop=True)
 #%%
 data = pd.concat([raw_train, raw_targets], axis=1)
 
-
 trash_indexes = list()
 
 trash_indexes += range(0, 190)
-
 
 trash_indexes += range(1191, 1886)
 
@@ -358,13 +332,11 @@ raw_targets = data.iloc[:, 10:]
 #%%
 
 
-
 trash_indexes = list()
 
 trash_indexes += raw_train[raw_train['A_C3H8'].isnull()].index.to_list()
 
 trash_indexes += raw_targets[raw_targets.iloc[:, 1:5].isnull().T.sum() > 0].index.to_list()
-
 
 trash_indexes += range(1131, 1138)
 trash_indexes += range(2822, 2828)
@@ -373,25 +345,20 @@ trash_indexes += range(4150, 4154)
 trash_indexes += range(4214, 4217)
 trash_indexes += range(4345, 4348)
 
-
 trash_indexes += range(2110, 2112)
 trash_indexes += range(4492, 4495)
-
 
 trash_indexes += [3850]
 trash_indexes += range(843, 871)
 trash_indexes += range(1250, 1254)
-
 
 trash_indexes += range(3850, 3855)
 trash_indexes += range(2829, 2831)
 trash_indexes += range(4348, 4350)
 trash_indexes += range(1475, 1478)
 
-
 trash_indexes += range(3534, 3539)
 trash_indexes += range(3578, 3586)
-
 
 trash_indexes += range(3638, 3641)
 trash_indexes += range(1341, 1349)
@@ -404,17 +371,16 @@ start = time.time()
 raw_train['A_rate'], raw_train['B_rate'] = A_B_rate_restore(raw_train['A_rate'], raw_train['B_rate'], 1000, 12)
 
 raw_train['A_CH4'] = chemical_data_restore(raw_train['A_CH4'], 500, 20, 100, 10)
-# raw_train['A_C2H6'] = chemical_data_restore(raw_train['A_C2H6'], 500, 20, 100, 14)
-# raw_train['A_C3H8'] = chemical_data_restore(raw_train['A_C3H8'], 500, 20, 100, 15)
-# raw_train['A_iC4H10'] = chemical_data_restore(raw_train['A_iC4H10'], 500, 20, 100, 11)
-# raw_train['A_nC4H10'] = chemical_data_restore(raw_train['A_nC4H10'], 500, 20, 100, 11)
-# raw_train['A_iC5H12'] = chemical_data_restore(raw_train['A_iC5H12'], 500, 20, 100, 7)
-# raw_train['A_nC5H12'] = chemical_data_restore(raw_train['A_nC5H12'], 400, 20, 100, 9)
-# raw_train['A_C6H14'] = chemical_data_restore(raw_train['A_C6H14'], 500, 20, 100, 18)
+raw_train['A_C2H6'] = chemical_data_restore(raw_train['A_C2H6'], 500, 20, 100, 14)
+raw_train['A_C3H8'] = chemical_data_restore(raw_train['A_C3H8'], 500, 20, 100, 15)
+raw_train['A_iC4H10'] = chemical_data_restore(raw_train['A_iC4H10'], 500, 20, 100, 11)
+raw_train['A_nC4H10'] = chemical_data_restore(raw_train['A_nC4H10'], 500, 20, 100, 11)
+raw_train['A_iC5H12'] = chemical_data_restore(raw_train['A_iC5H12'], 500, 20, 100, 7)
+raw_train['A_nC5H12'] = chemical_data_restore(raw_train['A_nC5H12'], 400, 20, 100, 9)
+raw_train['A_C6H14'] = chemical_data_restore(raw_train['A_C6H14'], 500, 20, 100, 18)
 
 end = time.time()
 print(end - start)
-
 
 raw_train = restore_percent(raw_train)
 
@@ -423,11 +389,9 @@ raw_train = restore_percent(raw_train)
 final_train = raw_train.copy()
 final_targets = raw_targets.copy()
 
-
 data = pd.concat([final_train, final_targets], axis=1)
 data.drop(list(set(trash_indexes)), axis=0, inplace=True)
 data = data.reset_index(drop=True)
-
 
 final_train = data.iloc[:, :10].copy()
 final_targets = data.iloc[:, 10:].copy()
@@ -436,7 +400,6 @@ final_targets = data.iloc[:, 10:].copy()
 
 data = pd.concat([final_train, final_targets], axis=1)
 data = data.drop([1353, 1354, 1355, 1437], axis=0).reset_index(drop=True)
-
 
 final_train = data.iloc[:, :11]
 final_targets = data.iloc[:, 11:]
@@ -457,26 +420,21 @@ final_train = comb_train.copy()
 
 final_data = pd.concat([final_train, final_targets], axis=1)
 
-
 valid_data = pd.DataFrame()
 
 j = 0
 
 none = pd.Series([np.nan] * 14, index=final_data.columns)
 
-1
 for i in range(final_data.shape[0] * 2 - 1):
 
-    # if i % 2 == 0:
     if i % 2 == 0 and j < len(final_data):
 
-        # valid_data = valid_data._append(final_data.iloc[j])
         valid_data = pd.concat([valid_data, final_data.iloc[[j]]], axis=0)
         j += 1
 
     else:
 
-        # valid_data = valid_data._append(none, ignore_index=True)
         valid_data = pd.concat([valid_data, none.to_frame().T], axis=0, ignore_index=True)
 
 valid_data = valid_data.iloc[:, :14]
@@ -488,44 +446,36 @@ valid_data = valid_data.reset_index(drop=True)
 
 final_data = valid_data.copy()
 
-
 final_train = final_data.iloc[:, :10]
 final_targets = final_data.iloc[:, 10:]
 
-
-
 final_test = test.copy()
+
+#%%
+# TODO Приводим final_data в формат ETNA
+
 
 #%%
 
 cv = [[np.arange(0 + i * 456, 912 + i * 456), np.arange(0, 8215)] for i in range(16)]
 
-
 drop_folds = [0, 7, 3, 8, 13]
 cv = [cv[i] for i in range(len(cv)) if i not in drop_folds]
 
 #%%
-
+# TODO Прогноз для каждого таргета отдельно
 submission = sample.copy()
 submission.iloc[:, 1:] = 0
 
-
 total_loss = 0
-
-
-#%%
-# TODO Прогноз для каждого таргета отдельно
-
 
 for num, target in enumerate(final_targets.columns):
 
     print(target, end='  ')
 
-
     loss = 0
 
     res = pd.Series(np.zeros(final_train.shape[0]))
-
 
     for num, (train_idx, test_idx) in enumerate(cv):
 
@@ -534,7 +484,7 @@ for num, target in enumerate(final_targets.columns):
         y_train = final_targets.iloc[train_idx][target]
         y_test = final_targets.iloc[test_idx][target].reset_index(drop=True)
         print(x_test.shape, y_test.shape)
-#%%
+
         model = Ridge()
 
         model.fit(x_train, y_train)
@@ -542,29 +492,27 @@ for num, target in enumerate(final_targets.columns):
         res += model.predict(x_test) / len(cv)
 
         submission[target] += model.predict(final_test) / len(cv)
-#%%
 
-        if target == 'B_C2H6':
-            res = exponential_smoothing(res, 0.65)
-            submission[target] = exponential_smoothing(submission[target], 0.65)
+    if target == 'B_C2H6':
+        res = exponential_smoothing(res, 0.65)
+        submission[target] = exponential_smoothing(submission[target], 0.65)
 
-        if target == 'B_C3H8':
-            res = exponential_smoothing(res, 0.2)
-            submission[target] = exponential_smoothing(submission[target], 0.2)
+    if target == 'B_C3H8':
+        res = exponential_smoothing(res, 0.2)
+        submission[target] = exponential_smoothing(submission[target], 0.2)
 
-        if target == 'B_iC4H10':
-            res = exponential_smoothing(res, 1)
-            submission[target] = exponential_smoothing(submission[target], 1)
+    if target == 'B_iC4H10':
+        res = exponential_smoothing(res, 1)
+        submission[target] = exponential_smoothing(submission[target], 1)
 
-        if target == 'B_nC4H10':
-            res = exponential_smoothing(res, 0.35)
-            submission[target] = exponential_smoothing(submission[target], 0.35)
+    if target == 'B_nC4H10':
+        res = exponential_smoothing(res, 0.35)
+        submission[target] = exponential_smoothing(submission[target], 0.35)
 
+    loss = mean_abs_per_err(y_test, res)
 
-        loss = mean_abs_per_err(y_test, res)
-
-        total_loss += loss
-        print(round(loss, 5))
+    total_loss += loss
+    print(round(loss, 5))
 
 print()
 print('total_loss', round(total_loss, 5) / 4)
@@ -581,4 +529,3 @@ print('total_loss', round(total_loss, 5) / 4)
 
 #%%
 submission.to_csv('combinated_version_v_6.csv', index=False)
-
