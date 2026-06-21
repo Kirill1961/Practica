@@ -236,11 +236,11 @@ print(end - start)
 features['B_rate_roll'] = features['B_rate'].rolling(190, min_periods=1).mean()
 
 """
-Дальше происходит процесс адаптивных сдвигов признаков относительно таргета, так как была найдена
+Дальше происходит процесс адаптивных лагов признаков относительно таргета, так как была найдена
 взаимосвязь между напором в трубе и временем через которое газ приходит в точку назначения. 
 Обычный сдвиг на константу давал результат хуже, 👉 поэтому сдвиг будет адаптивный 
 Поэтому в зависимости от напора мы берем более или менее старые данные из прошлого.
-👉 A_rate → расход газа в точке A, B_rate → расход газа в точке
+👉 A_rate → расход газа в точке A, B_rate → расход газа в точке B
 """
 
 new_features = features.copy()
@@ -397,12 +397,16 @@ final_train = data.iloc[:, :10].copy()
 final_targets = data.iloc[:, 10:].copy()
 
 #%%
+# TODO DROP Индекс timestamp
 
 data = pd.concat([final_train, final_targets], axis=1)
 data = data.drop([1353, 1354, 1355, 1437], axis=0).reset_index(drop=True)
 
-final_train = data.iloc[:, :11]
-final_targets = data.iloc[:, 11:]
+# final_train = data.iloc[:, :11]
+# final_targets = data.iloc[:, 11:]
+
+final_train = data.iloc[:, :10]
+final_targets = data.iloc[:, 10:]
 
 #%%
 
@@ -452,15 +456,33 @@ final_targets = final_data.iloc[:, 10:]
 final_test = test.copy()
 
 #%%
-# TODO Приводим final_data в формат ETNA
-
-
-#%%
-
+# TODO cv - кастомная валидация
 cv = [[np.arange(0 + i * 456, 912 + i * 456), np.arange(0, 8215)] for i in range(16)]
+# cv = [[np.arange(0 + i * 456, 912 + i * 456), np.arange(i * 456 + 912, i * 456 + 912 + 456)] for i in range(16)]
+
+
+
+
 
 drop_folds = [0, 7, 3, 8, 13]
 cv = [cv[i] for i in range(len(cv)) if i not in drop_folds]
+
+#%%
+# TODO target + train + timestamp приводим к Формату  ETNA через melt
+# Таблица  растягивается вверх поэтому следим за shape
+data_copy = data.copy()
+data_etna = data_copy.melt(id_vars='timestamp',  var_name="segment", value_name="target")
+data_etna.shape
+
+#%%
+data_final = pd.merge(final_train, final_targets, how="inner", on=final_train.index)
+
+
+
+#%%
+# TODO делим data_etna на train и test
+
+
 
 #%%
 # TODO Прогноз для каждого таргета отдельно
