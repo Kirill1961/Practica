@@ -385,7 +385,7 @@ print(end - start)
 raw_train = restore_percent(raw_train)
 
 #%%
-
+# TODO isna()=0, final_train.shape(4112, 10), final_targets.shape(4112, 5)
 final_train = raw_train.copy()
 final_targets = raw_targets.copy()
 
@@ -398,18 +398,18 @@ final_targets = data.iloc[:, 10:].copy()
 
 #%%
 # TODO DROP Индекс timestamp
-
+#  isna()=0, final_train.shape(4112, 10), final_targets.shape(4112, 5)
 data = pd.concat([final_train, final_targets], axis=1)
 data = data.drop([1353, 1354, 1355, 1437], axis=0).reset_index(drop=True)
 
 # final_train = data.iloc[:, :11]
 # final_targets = data.iloc[:, 11:]
 
-final_train = data.iloc[:, :10]
-final_targets = data.iloc[:, 10:]
+final_train = data.iloc[:, :11]  # оставили timestamp
+final_targets = data.iloc[:, 10:]  # оставили timestamp
 
 #%%
-
+# TODO isna()=0, final_train.shape(4112, 10), final_targets.shape(4112, 5)
 comb_data = pd.merge(final_train, train, on='timestamp', how='left')
 
 idx = comb_data[~comb_data['A_rate_y'].isnull()].index
@@ -420,17 +420,18 @@ comb_train.iloc[idx] = comb_data[~comb_data['A_rate_y'].isnull()].iloc[:, 11:]
 final_train = comb_train.copy()
 
 #%%
-# TODO oversampling
-
+# TODO oversampling ⭐❗ если добавлять значения то надо добавлять дату
+#  isna()=0, final_train.shape(4112, 10), final_targets.shape(4112, 5)
 final_data = pd.concat([final_train, final_targets], axis=1)
 
 valid_data = pd.DataFrame()
 
 j = 0
 
-none = pd.Series([np.nan] * 14, index=final_data.columns)
+# none = pd.Series([np.nan] * 14, index=final_data.columns)
+none = pd.Series([np.nan] * 15, index=final_data.columns)  # none - Нулевой series из 15 строк
 
-for i in range(final_data.shape[0] * 2 - 1):
+for i in range(final_data.shape[0] * 2):
 
     if i % 2 == 0 and j < len(final_data):
 
@@ -440,12 +441,15 @@ for i in range(final_data.shape[0] * 2 - 1):
     else:
 
         valid_data = pd.concat([valid_data, none.to_frame().T], axis=0, ignore_index=True)
-
-valid_data = valid_data.iloc[:, :14]
+#%%
+valid_data = valid_data.iloc[:, :15]
+print(valid_data.index)
 
 valid_data = valid_data[final_data.columns]
-
+#%%
 valid_data = valid_data.interpolate()
+
+#%%
 valid_data = valid_data.reset_index(drop=True)
 
 final_data = valid_data.copy()
@@ -460,10 +464,6 @@ final_test = test.copy()
 cv = [[np.arange(0 + i * 456, 912 + i * 456), np.arange(0, 8215)] for i in range(16)]
 # cv = [[np.arange(0 + i * 456, 912 + i * 456), np.arange(i * 456 + 912, i * 456 + 912 + 456)] for i in range(16)]
 
-
-
-
-
 drop_folds = [0, 7, 3, 8, 13]
 cv = [cv[i] for i in range(len(cv)) if i not in drop_folds]
 
@@ -473,16 +473,6 @@ cv = [cv[i] for i in range(len(cv)) if i not in drop_folds]
 data_copy = data.copy()
 data_etna = data_copy.melt(id_vars='timestamp',  var_name="segment", value_name="target")
 data_etna.shape
-
-#%%
-data_final = pd.merge(final_train, final_targets, how="inner", on=final_train.index)
-
-
-
-#%%
-# TODO делим data_etna на train и test
-
-
 
 #%%
 # TODO Прогноз для каждого таргета отдельно
