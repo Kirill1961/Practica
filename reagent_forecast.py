@@ -456,7 +456,7 @@ valid_data = final_data.asfreq('15min')
 #
 #         valid_data = pd.concat([valid_data, none.to_frame().T], axis=0, ignore_index=True)
 #%%
-# TODO valid_data Заполнение пропусков через interpolate
+# TODO valid_data заполнение пропусков через interpolate
 valid_data = valid_data.iloc[:, :14]
 print(valid_data.index)
 
