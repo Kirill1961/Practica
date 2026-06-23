@@ -239,7 +239,7 @@ features['B_rate_roll'] = features['B_rate'].rolling(190, min_periods=1).mean()
 Дальше происходит процесс адаптивных лагов признаков относительно таргета, так как была найдена
 взаимосвязь между напором в трубе и временем через которое газ приходит в точку назначения. 
 Обычный сдвиг на константу давал результат хуже, 👉 поэтому сдвиг будет адаптивный 
-Поэтому в зависимости от напора мы берем более или менее старые данные из прошлого.
+Поэтому в зависимости от расхода в точке В, мы берем более или менее старые данные из прошлого.
 👉 A_rate → расход газа в точке A, B_rate → расход газа в точке B
 """
 
@@ -385,7 +385,6 @@ print(end - start)
 raw_train = restore_percent(raw_train)
 
 #%%
-# TODO isna()=0, final_train.shape(4112, 10), final_targets.shape(4112, 5)
 final_train = raw_train.copy()
 final_targets = raw_targets.copy()
 
@@ -419,45 +418,72 @@ comb_train.iloc[idx] = comb_data[~comb_data['A_rate_y'].isnull()].iloc[:, 11:]
 
 final_train = comb_train.copy()
 
+# final_targets.set_index('timestamp', inplace=True)
+#
+# final_train.index = final_targets.index
+
 #%%
-# TODO oversampling ⭐❗ если добавлять значения то надо добавлять дату
+# TODO oversampling ⭐❗ timestamp должен быть переведён в индекс
 #  isna()=0, final_train.shape(4112, 10), final_targets.shape(4112, 5)
 final_data = pd.concat([final_train, final_targets], axis=1)
+# final_data = pd.merge(final_train, final_targets, on='timestamp', how='left')
 
-valid_data = pd.DataFrame()
+# Замена  типа object на datetime64[ns]
+final_data['timestamp'] = final_data['timestamp'].astype('datetime64[ns]')
+final_data.set_index('timestamp', inplace=True)
 
-j = 0
+# Изменение частоты, подготовка к oversampling
+valid_data = final_data.asfreq('15min')
+
+#%%
+# valid_data = pd.DataFrame()
+# valid_data = pd.DataFrame(index=final_train.index)
+
+# j = 0
 
 # none = pd.Series([np.nan] * 14, index=final_data.columns)
-none = pd.Series([np.nan] * 15, index=final_data.columns)  # none - Нулевой series из 15 строк
+# none = pd.Series([np.nan] * 14, index=final_data.columns)  # none - Нулевой series из 15 строк
 
-for i in range(final_data.shape[0] * 2):
-
-    if i % 2 == 0 and j < len(final_data):
-
-        valid_data = pd.concat([valid_data, final_data.iloc[[j]]], axis=0)
-        j += 1
-
-    else:
-
-        valid_data = pd.concat([valid_data, none.to_frame().T], axis=0, ignore_index=True)
 #%%
-valid_data = valid_data.iloc[:, :15]
+# for i in range(final_data.shape[0] * 2 - 1):
+#
+#     if i % 2 == 0 and j < len(final_data):
+#
+#         valid_data = pd.concat([valid_data, final_data.iloc[[j]]], axis=0)
+#         j += 1
+#
+#     else:
+#
+#         valid_data = pd.concat([valid_data, none.to_frame().T], axis=0, ignore_index=True)
+#%%
+# TODO valid_data Заполнение пропусков через interpolate
+valid_data = valid_data.iloc[:, :14]
 print(valid_data.index)
 
-valid_data = valid_data[final_data.columns]
-#%%
+valid_data = valid_data[final_data.columns]  # Синхронизация
+
 valid_data = valid_data.interpolate()
 
 #%%
-valid_data = valid_data.reset_index(drop=True)
+# TODO Для формата etna отделяем train от target
+valid_data = valid_data.reset_index()
 
 final_data = valid_data.copy()
 
 final_train = final_data.iloc[:, :10]
-final_targets = final_data.iloc[:, 10:]
+final_targets = final_data.iloc[:, [0, -4, -3, -2, -1]]
 
 final_test = test.copy()
+
+#%%
+# TODO Приводим к формату etna train от target
+
+df_regressors = final_train.melt(id_vars="timestamp", var_name="segment", value_name="target")
+df_to_forecast = final_targets.melt(id_vars="timestamp", var_name="segment", value_name="target")
+
+#%%
+# TODO TSDataset
+ts = TSDataset(df=df_to_forecast, freq="15min", df_exog=df_regressors)
 
 #%%
 # TODO cv - кастомная валидация
