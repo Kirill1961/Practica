@@ -26,14 +26,30 @@ import matplotlib
 
 matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt
-import seaborn as sns
+
 
 plt.style.use('seaborn-v0_8-bright')
-from statsmodels.tsa.stattools import acf, pacf, ccf
-from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
-from statsmodels.tsa.seasonal import seasonal_decompose, STL
 
+from etna.analysis import (
+    acf_plot,
+    plot_correlation_matrix,
+    cross_corr_plot,
+    distribution_plot,
+    plot_trend,
+    stl_plot,
+    seasonal_plot,
+    plot_periodogram,
+    get_anomalies_density,
+    get_anomalies_median,
+    plot_anomalies,
+    find_change_points,
+    plot_change_points_interactive,
+    plot_time_series_with_change_points
+)
+
+from etna.analysis import (acf_plot)
 from etna.datasets.tsdataset import TSDataset
+from etna.transforms import LinearTrendTransform
 
 #%%
 # TODO 1 часть: функции
@@ -470,7 +486,7 @@ valid_data = valid_data.reset_index()
 
 final_data = valid_data.copy()
 
-final_train = final_data.iloc[:, :10]
+final_train = final_data.iloc[:, :11]
 final_targets = final_data.iloc[:, [0, -4, -3, -2, -1]]
 
 final_test = test.copy()
