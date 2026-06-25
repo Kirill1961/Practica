@@ -44,14 +44,17 @@ from etna.analysis import (
     plot_anomalies,
     find_change_points,
     plot_change_points_interactive,
-    plot_time_series_with_change_points
+    plot_time_series_with_change_points,
+    plot_forecast
 )
-
-from etna.analysis import (acf_plot)
 from etna.datasets.tsdataset import TSDataset
-from etna.transforms import LinearTrendTransform
+from etna.transforms import LinearTrendTransform, LagTransform, TimeSeriesImputerTransform
+from etna.models import NaiveModel, LinearPerSegmentModel, CatBoostPerSegmentModel, SeasonalMovingAverageModel
+from etna.metrics import MAE
+
 
 #%%
+
 # TODO 1 часть: функции
 def mean_abs_per_err(y_true, y_pred):
     """
@@ -60,7 +63,7 @@ def mean_abs_per_err(y_true, y_pred):
     return (abs((y_true - y_pred) / y_true)).mean() * 100
 
 
-#%%
+
 def exponential_smoothing(series, alpha):
     """
     Функция экспоненциального сглаживания, Рекурсивно.
@@ -74,7 +77,7 @@ def exponential_smoothing(series, alpha):
     return pd.Series(result)
 
 
-#%%
+
 # TODO Кастомный ffill
 def A_B_rate_restore(a_rate, b_rate, window, sigma):
     """
@@ -145,7 +148,7 @@ def A_B_rate_restore(a_rate, b_rate, window, sigma):
     return pd.Series(result_a), pd.Series(result_b)
 
 
-#%%
+
 def chemical_data_restore(series, window, window_mean, window_resid, sigma):
     """
     Функция, которая восстанавливает значения химических элементов
@@ -182,7 +185,7 @@ def chemical_data_restore(series, window, window_mean, window_resid, sigma):
     return pd.Series(result)
 
 
-#%%
+
 # TODO Восстановления процентов
 def restore_percent(data):
     """
@@ -208,13 +211,13 @@ def restore_percent(data):
     return data.iloc[:, :-2]
 
 
-#%%
+
 # TODO 2 часть: подготовка данных с новыми адаптивными сдвигами
 
 raw_train = pd.read_csv(r"D:\Eduson_data\sb_train_features.csv")
 raw_test = pd.read_csv("D:\Eduson_data\sb_test_features.csv")
 raw_targets = pd.read_csv("D:\Eduson_data\sb_train_targets.csv")
-sample = pd.read_csv("D:\Eduson_data\sb_sample_submission.csv")
+# sample = pd.read_csv("D:\Eduson_data\sb_sample_submission.csv")
 
 raw_train.drop('timestamp', axis=1, inplace=True)
 raw_test.drop('timestamp', axis=1, inplace=True)
@@ -226,10 +229,13 @@ data = pd.concat([data, raw_test], axis=0).reset_index(drop=True)
 
 data = data[2200:].reset_index(drop=True)
 
+data = pd.concat([data, raw_test], axis=0).reset_index(drop=True)
+
+# TODO features = raw_train + raw_targets + raw_test
 features = data.iloc[:, :10]
 targets = data.iloc[:, 10:]
 
-#%%
+
 # TODO features
 start = time.time()
 
@@ -246,8 +252,6 @@ features['A_C6H14'] = chemical_data_restore(features['A_C6H14'], 500, 20, 100, 1
 
 end = time.time()
 print(end - start)
-
-#%%
 
 features['B_rate_roll'] = features['B_rate'].rolling(190, min_periods=1).mean()
 
@@ -292,7 +296,7 @@ new_targets = new_targets.drop(range(2250, 2450), axis=0).reset_index(drop=True)
 new_features = new_features.drop(range(1290, 1440), axis=0).reset_index(drop=True)
 new_targets = new_targets.drop(range(1290, 1440), axis=0).reset_index(drop=True)
 
-test = new_features[-3984:].reset_index(drop=True)
+# test = new_features[-3984:].reset_index(drop=True)
 
 data = pd.concat([new_features, new_targets], axis=1).dropna(
     subset=['B_C2H6', 'B_C3H8', 'B_iC4H10', 'B_nC4H10']).reset_index(drop=True)
@@ -303,33 +307,33 @@ new_targets = data.iloc[:, 11:].reset_index(drop=True)
 train = new_features.copy()
 train_targets = new_targets.copy()
 
-#%%
 
-raw_train = pd.read_csv("D:\Eduson_data\sb_train_features.csv")
-raw_test = pd.read_csv("D:\Eduson_data\sb_test_features.csv")
-raw_targets = pd.read_csv("D:\Eduson_data\sb_train_targets.csv")
 
-raw_train.drop('timestamp', axis=1, inplace=True)
-raw_test.drop('timestamp', axis=1, inplace=True)
-# raw_targets.drop('timestamp', axis=1, inplace=True)
+# raw_train = pd.read_csv("D:\Eduson_data\sb_train_features.csv")
+# raw_test = pd.read_csv("D:\Eduson_data\sb_test_features.csv")
+# raw_targets = pd.read_csv("D:\Eduson_data\sb_train_targets.csv")
+#
+# raw_train.drop('timestamp', axis=1, inplace=True)
+# raw_test.drop('timestamp', axis=1, inplace=True)
+# # raw_targets.drop('timestamp', axis=1, inplace=True)
+#
+# shift = 192
+# full_size = 9792
+# size_test = 3984 + shift
+# size_train = full_size - size_test
+#
+# data = pd.concat([raw_train, raw_targets], axis=1)
+# data = pd.concat([data, raw_test], axis=0)
+#
+# data = pd.concat([data.iloc[:, :9].reset_index(drop=True),
+#                   data.iloc[1:, 9].reset_index(drop=True),
+#                   data.iloc[shift:, 10:].reset_index(drop=True)], axis=1)
+#
+# raw_train = data.iloc[:size_train, :10].reset_index(drop=True)
+# raw_targets = data.iloc[:size_train, 10:].reset_index(drop=True)
+# raw_test = data.iloc[size_train:-shift, :10].reset_index(drop=True)
 
-shift = 192
-full_size = 9792
-size_test = 3984 + shift
-size_train = full_size - size_test
 
-data = pd.concat([raw_train, raw_targets], axis=1)
-data = pd.concat([data, raw_test], axis=0)
-
-data = pd.concat([data.iloc[:, :9].reset_index(drop=True),
-                  data.iloc[1:, 9].reset_index(drop=True),
-                  data.iloc[shift:, 10:].reset_index(drop=True)], axis=1)
-
-raw_train = data.iloc[:size_train, :10].reset_index(drop=True)
-raw_targets = data.iloc[:size_train, 10:].reset_index(drop=True)
-raw_test = data.iloc[size_train:-shift, :10].reset_index(drop=True)
-
-#%%
 data = pd.concat([raw_train, raw_targets], axis=1)
 
 trash_indexes = list()
@@ -345,7 +349,7 @@ data = data.drop(trash_indexes, axis=0).reset_index(drop=True)
 raw_train = data.iloc[:, :10]
 raw_targets = data.iloc[:, 10:]
 
-#%%
+
 
 
 trash_indexes = list()
@@ -380,7 +384,7 @@ trash_indexes += range(3638, 3641)
 trash_indexes += range(1341, 1349)
 trash_indexes += range(2835, 2837)
 
-#%%
+
 # TODO Восстановление train и %
 
 start = time.time()
@@ -411,11 +415,11 @@ data = data.reset_index(drop=True)
 final_train = data.iloc[:, :10].copy()
 final_targets = data.iloc[:, 10:].copy()
 
-#%%
+
 # TODO DROP Индекс timestamp
 #  isna()=0, final_train.shape(4112, 10), final_targets.shape(4112, 5)
 data = pd.concat([final_train, final_targets], axis=1)
-data = data.drop([1353, 1354, 1355, 1437], axis=0).reset_index(drop=True)
+data = data.drop([1353, 1354, 1355, 1437], axis=0)
 
 # final_train = data.iloc[:, :11]
 # final_targets = data.iloc[:, 11:]
@@ -423,16 +427,32 @@ data = data.drop([1353, 1354, 1355, 1437], axis=0).reset_index(drop=True)
 final_train = data.iloc[:, :11]  # оставили timestamp
 final_targets = data.iloc[:, 10:]  # оставили timestamp
 
+final_train['timestamp'] = final_train['timestamp'].astype('datetime64[ns]')  # str to datetime64
+final_targets['timestamp'] = final_targets['timestamp'].astype('datetime64[ns]') # str to datetime64
+
+#%%
+# TODO Явное Задание Частоты
+#  при этом заполняются пропущенные интервалы которые покажет diff().value_counts()
+df_tr = final_train.set_index("timestamp")
+df_tr = df_tr.asfreq("30min")
+df_tr = df_tr.interpolate(method="time")
+
+df_tg = final_targets.set_index("timestamp")
+df_tg = df_tg.asfreq("30min")
+df_tg = df_tg.interpolate(method="time")
+
+final_train = df_tr.reset_index()
+final_targets = df_tg.reset_index()
 #%%
 # TODO isna()=0, final_train.shape(4112, 10), final_targets.shape(4112, 5)
-comb_data = pd.merge(final_train, train, on='timestamp', how='left')
-
-idx = comb_data[~comb_data['A_rate_y'].isnull()].index
-
-comb_train = final_train.iloc[:, :10].copy()
-comb_train.iloc[idx] = comb_data[~comb_data['A_rate_y'].isnull()].iloc[:, 11:]
-
-final_train = comb_train.copy()
+# comb_data = pd.merge(final_train, train, on='timestamp', how='left')
+#
+# idx = comb_data[~comb_data['A_rate_y'].isnull()].index
+#
+# comb_train = final_train.iloc[:, :10].copy()
+# comb_train.iloc[idx] = comb_data[~comb_data['A_rate_y'].isnull()].iloc[:, 11:]
+#
+# final_train = comb_train.copy()
 
 # final_targets.set_index('timestamp', inplace=True)
 #
@@ -441,56 +461,64 @@ final_train = comb_train.copy()
 #%%
 # TODO oversampling ⭐❗ timestamp должен быть переведён в индекс
 #  isna()=0, final_train.shape(4112, 10), final_targets.shape(4112, 5)
-final_data = pd.concat([final_train, final_targets], axis=1)
+# final_data = pd.concat([final_train, final_targets], axis=1)
 # final_data = pd.merge(final_train, final_targets, on='timestamp', how='left')
 
 # Замена  типа object на datetime64[ns]
-final_data['timestamp'] = final_data['timestamp'].astype('datetime64[ns]')
-final_data.set_index('timestamp', inplace=True)
+# final_data['timestamp'] = final_data['timestamp'].astype('datetime64[ns]')
+# final_data.set_index('timestamp', inplace=True)
 
-# Изменение частоты, подготовка к oversampling
-valid_data = final_data.asfreq('15min')
-
-#%%
-# valid_data = pd.DataFrame()
-# valid_data = pd.DataFrame(index=final_train.index)
-
-# j = 0
-
-# none = pd.Series([np.nan] * 14, index=final_data.columns)
-# none = pd.Series([np.nan] * 14, index=final_data.columns)  # none - Нулевой series из 15 строк
+# valid_data = final_data
 
 #%%
-# for i in range(final_data.shape[0] * 2 - 1):
+# TODO
+# valid_data = valid_data.iloc[:, :14]
+# # print(valid_data.index)
 #
-#     if i % 2 == 0 and j < len(final_data):
+# valid_data = valid_data[final_data.columns]  # Синхронизация
 #
-#         valid_data = pd.concat([valid_data, final_data.iloc[[j]]], axis=0)
-#         j += 1
-#
-#     else:
-#
-#         valid_data = pd.concat([valid_data, none.to_frame().T], axis=0, ignore_index=True)
-#%%
-# TODO valid_data заполнение пропусков через interpolate
-valid_data = valid_data.iloc[:, :14]
-print(valid_data.index)
+# valid_data = valid_data.interpolate()  # На всякий случай
 
-valid_data = valid_data[final_data.columns]  # Синхронизация
 
-valid_data = valid_data.interpolate()
-
-#%%
 # TODO Для формата etna отделяем train от target
-valid_data = valid_data.reset_index()
+# valid_data = valid_data.reset_index()
+#
+# final_data = valid_data.copy()
 
-final_data = valid_data.copy()
+# final_train = final_data.iloc[:, :10]
+# final_train.reset_index(inplace=True)
+#
+# final_targets = final_data.iloc[:, -4:]
+# final_targets.reset_index(inplace=True)
 
-final_train = final_data.iloc[:, :11]
-final_targets = final_data.iloc[:, [0, -4, -3, -2, -1]]
+# final_test = test.copy()
 
-final_test = test.copy()
+#%%
+# TODO Проверка timestamp у  final_train и final_targets:
+#  Одинаковость len размера, equals - совпадение значений,  equals min / max
 
+# Одинаковость размеров
+print(len(final_targets))
+print(len(final_train))
+
+# Одинаковость границ
+print(final_targets["timestamp"].min())
+print(final_targets["timestamp"].max())
+print(final_train["timestamp"].min())
+print(final_train["timestamp"].max())
+
+# Совпадение Значений
+final_targets["timestamp"].equals(
+    final_train["timestamp"]
+)
+
+# Проверка на одинаковость интервалов
+mask = final_targets["timestamp"].diff() != pd.Timedelta("30min")
+print(final_targets.loc[mask, ["timestamp"]])
+
+# Проверка на одинаковость интервалов
+final_train["timestamp"].diff().value_counts().sort_index()
+final_targets["timestamp"].diff().value_counts().sort_index()
 #%%
 # TODO Приводим к формату etna train от target
 
@@ -499,7 +527,172 @@ df_to_forecast = final_targets.melt(id_vars="timestamp", var_name="segment", val
 
 #%%
 # TODO TSDataset
-ts = TSDataset(df=df_to_forecast, freq="15min", df_exog=df_regressors)
+ts = TSDataset(
+    df=df_to_forecast,
+    freq="30min",
+    df_exog=df_regressors
+)
+
+#%%
+# TODO EDA До преобразований
+ts.plot(figsize=(5, 3))
+plt.show()
+
+#%%
+acf_plot(ts, lags=10, figsize=(5, 3))
+plt.show()
+
+#%%
+acf_plot(ts, lags=10, figsize=(5, 3), partial=True)
+plt.show()
+
+#%%
+# TODO Удаляем Тренд
+transform = LinearTrendTransform(in_column="target", poly_degree=2)
+ts.fit_transform([transform])
+
+ts.plot(figsize=(5, 3))
+plt.show()
+
+#%%
+# TODO train_ts, test_ts
+
+# NaiveModel
+horizon = 48
+
+train_ts, test_ts = ts.train_test_split(test_size=horizon)
+
+
+# TODO Проверка данных
+print(len(train_ts.to_pandas()))
+print(len(test_ts.to_pandas()))
+
+# print(train_ts.to_pandas().isna().sum())
+# print(test_ts.to_pandas().isna().sum())
+
+print(train_ts.to_pandas().isna().any().any())
+print(test_ts.to_pandas().isna().any().any())
+
+print(train_ts.to_pandas().isna().sum().sum())
+print(test_ts.to_pandas().isna().sum().sum())
+
+# Пропуски по строкам
+# df = train_ts.to_pandas()
+# df[df.isna().any(axis=1)]
+
+
+#%%
+# TODO baisline NaiveModel
+model = NaiveModel(lag=1)
+
+model.fit(train_ts)
+
+future_ts = train_ts.make_future(48)
+
+
+#%%
+forecast_ts = model.forecast(
+    future_ts
+    # prediction_size=horizon
+)
+
+#%%
+metric = MAE()
+
+score = metric(y_true=test_ts, y_pred=forecast_ts)
+
+print(score)
+
+plot_forecast(
+    forecast_ts=forecast_ts,
+    test_ts=test_ts,
+    train_ts=train_ts
+)
+
+#%%
+
+horizon = 48
+
+model = SeasonalMovingAverageModel(window=24)
+
+model.fit(train_ts)
+
+future_ts = train_ts.make_future(horizon)
+
+forecast_ts = model.forecast(
+    future_ts,
+    prediction_size=horizon
+)
+
+#%%
+
+horizon = 48
+
+train_ts, test_ts = ts.train_test_split(test_size=horizon)
+
+# лаги (важно для линейной модели)
+transforms = [
+    LagTransform(in_column="target", lags=[1, 2, 3, 4, 5, 6, 12, 24])
+]
+
+model = LinearPerSegmentModel()
+
+model.fit(train_ts)
+
+future_ts = train_ts.make_future(horizon)
+
+forecast_ts = model.forecast(future_ts)
+
+#%%
+model = CatBoostPerSegmentModel()
+
+model.fit(train_ts)
+
+future_ts = train_ts.make_future(48)
+
+forecast_ts = model.forecast(future_ts)
+
+#%%
+# from etna.transforms import LagTransform, TimeSeriesImputerTransform
+# from etna.models import CatBoostPerSegmentModel
+
+horizon = 48
+
+train_ts, test_ts = ts.train_test_split(test_size=horizon)
+
+transforms = [
+    TimeSeriesImputerTransform(in_column="target"),
+    LagTransform(in_column="target", lags=[1, 2, 3, 4, 5, 6, 12, 24, 48])
+]
+
+model = CatBoostPerSegmentModel()
+
+model.fit(train_ts, transforms=transforms)
+
+future_ts = train_ts.make_future(horizon)
+
+forecast_ts = model.forecast(future_ts)
+
+#%%
+
+# from etna.transforms import LagTransform
+# from etna.models import LinearPerSegmentModel
+
+horizon = 48
+
+train_ts, test_ts = ts.train_test_split(test_size=horizon)
+
+transforms = [
+    LagTransform(in_column="target", lags=[1, 2])
+]
+
+model = LinearPerSegmentModel()
+
+model.fit(train_ts, transforms=transforms)
+
+future_ts = train_ts.make_future(horizon)
+
+forecast_ts = model.forecast(future_ts)
 
 #%%
 # TODO cv - кастомная валидация
