@@ -696,23 +696,27 @@ forecast_ts = model.forecast(future_ts)
 
 #%%
 # TODO cv - кастомная валидация
-cv = [[np.arange(0 + i * 456, 912 + i * 456), np.arange(0, 8215)] for i in range(16)]
+cv = [[np.arange(0 + i * 456, 912 + i * 456), np.arange(0, 5618)] for i in range(8)]
 # cv = [[np.arange(0 + i * 456, 912 + i * 456), np.arange(i * 456 + 912, i * 456 + 912 + 456)] for i in range(16)]
 
-drop_folds = [0, 7, 3, 8, 13]
-cv = [cv[i] for i in range(len(cv)) if i not in drop_folds]
+# drop_folds = [0, 7, 3, 8, 13]
+# cv = [cv[i] for i in range(len(cv)) if i not in drop_folds]
 
 #%%
 # TODO target + train + timestamp приводим к Формату  ETNA через melt
 # Таблица  растягивается вверх поэтому следим за shape
-data_copy = data.copy()
-data_etna = data_copy.melt(id_vars='timestamp',  var_name="segment", value_name="target")
-data_etna.shape
+# data_copy = data.copy()
+# data_etna = data_copy.melt(id_vars='timestamp',  var_name="segment", value_name="target")
+# data_etna.shape
 
 #%%
 # TODO Прогноз для каждого таргета отдельно
-submission = sample.copy()
-submission.iloc[:, 1:] = 0
+# submission = sample.copy()
+# submission.iloc[:, 1:] = 0
+
+final_train.drop('timestamp', axis=1, inplace=True)
+final_targets.drop('timestamp', axis=1, inplace=True)
+#%%
 
 total_loss = 0
 
@@ -738,23 +742,23 @@ for num, target in enumerate(final_targets.columns):
 
         res += model.predict(x_test) / len(cv)
 
-        submission[target] += model.predict(final_test) / len(cv)
+        # submission[target] += model.predict(final_test) / len(cv)
 
     if target == 'B_C2H6':
         res = exponential_smoothing(res, 0.65)
-        submission[target] = exponential_smoothing(submission[target], 0.65)
+        # submission[target] = exponential_smoothing(submission[target], 0.65)
 
     if target == 'B_C3H8':
         res = exponential_smoothing(res, 0.2)
-        submission[target] = exponential_smoothing(submission[target], 0.2)
+        # submission[target] = exponential_smoothing(submission[target], 0.2)
 
     if target == 'B_iC4H10':
         res = exponential_smoothing(res, 1)
-        submission[target] = exponential_smoothing(submission[target], 1)
+        # submission[target] = exponential_smoothing(submission[target], 1)
 
     if target == 'B_nC4H10':
         res = exponential_smoothing(res, 0.35)
-        submission[target] = exponential_smoothing(submission[target], 0.35)
+        # submission[target] = exponential_smoothing(submission[target], 0.35)
 
     loss = mean_abs_per_err(y_test, res)
 
