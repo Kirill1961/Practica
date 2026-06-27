@@ -305,7 +305,7 @@ new_features = data.iloc[:, :11].reset_index(drop=True)
 new_targets = data.iloc[:, 11:].reset_index(drop=True)
 
 train = new_features.copy()
-train_targets = new_targets.copy()
+# train_targets = new_targets.copy()
 
 
 
@@ -427,8 +427,38 @@ data = data.drop([1353, 1354, 1355, 1437], axis=0)
 final_train = data.iloc[:, :11]  # оставили timestamp
 final_targets = data.iloc[:, 10:]  # оставили timestamp
 
+# final_train['timestamp'] = final_train['timestamp'].astype('datetime64[ns]')  # str to datetime64
+# final_targets['timestamp'] = final_targets['timestamp'].astype('datetime64[ns]')  # str to datetime64
+
+#%%
+# TODO comb_data train
+comb_data = pd.merge(final_train, train, on='timestamp', how='left')
+
+idx = comb_data[~comb_data['A_rate_y'].isnull()].index
+
+comb_train = final_train.iloc[:, :11].copy()
+comb_train.iloc[idx] = comb_data[~comb_data['A_rate_y'].isnull()].iloc[:, 10:]
+
+final_train = comb_train.copy()
+
+#%%
 final_train['timestamp'] = final_train['timestamp'].astype('datetime64[ns]')  # str to datetime64
-final_targets['timestamp'] = final_targets['timestamp'].astype('datetime64[ns]') # str to datetime64
+final_targets['timestamp'] = final_targets['timestamp'].astype('datetime64[ns]')  # str to datetime64
+
+
+#%%
+# timestamp - в индекс для дальнейшего связывания индексов
+final_targets.set_index('timestamp', inplace=True)
+final_train.set_index('timestamp', inplace=True)
+# Связывание Индексов
+final_train.index = final_targets.index
+
+
+#%%
+# TODO Возвращаем timestamp из индекса в таблицу
+final_targets.reset_index(inplace=True)
+final_train.reset_index(inplace=True)
+
 
 #%%
 # TODO Явное Задание Частоты
@@ -443,20 +473,6 @@ df_tg = df_tg.interpolate(method="time")
 
 final_train = df_tr.reset_index()
 final_targets = df_tg.reset_index()
-#%%
-# TODO isna()=0, final_train.shape(4112, 10), final_targets.shape(4112, 5)
-# comb_data = pd.merge(final_train, train, on='timestamp', how='left')
-#
-# idx = comb_data[~comb_data['A_rate_y'].isnull()].index
-#
-# comb_train = final_train.iloc[:, :10].copy()
-# comb_train.iloc[idx] = comb_data[~comb_data['A_rate_y'].isnull()].iloc[:, 11:]
-#
-# final_train = comb_train.copy()
-
-# final_targets.set_index('timestamp', inplace=True)
-#
-# final_train.index = final_targets.index
 
 #%%
 # TODO oversampling ⭐❗ timestamp должен быть переведён в индекс
@@ -696,7 +712,7 @@ forecast_ts = model.forecast(future_ts)
 
 #%%
 # TODO cv - кастомная валидация
-cv = [[np.arange(0 + i * 456, 912 + i * 456), np.arange(0, 5618)] for i in range(11)]
+cv = [[np.arange(0 + i * 456, 912 + i * 456), np.arange(0, 4208)] for i in range(8)]
 # cv = [[np.arange(0 + i * 456, 912 + i * 456), np.arange(i * 456 + 912, i * 456 + 912 + 456)] for i in range(16)]
 
 # drop_folds = [0, 7, 3, 8, 13]
