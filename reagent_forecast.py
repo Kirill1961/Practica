@@ -53,7 +53,7 @@ from etna.models import NaiveModel, LinearPerSegmentModel, CatBoostPerSegmentMod
 from etna.metrics import MAE
 
 
-#%%
+
 
 # TODO 1 часть: функции
 def mean_abs_per_err(y_true, y_pred):
@@ -514,7 +514,7 @@ final_targets["timestamp"].equals(
 
 # Проверка на одинаковость интервалов
 mask = final_targets["timestamp"].diff() != pd.Timedelta("30min")
-print(final_targets.loc[mask, ["timestamp"]])
+print('Timedelta', final_targets.loc[mask, ["timestamp"]])
 
 # Проверка на одинаковость интервалов
 final_train["timestamp"].diff().value_counts().sort_index()
@@ -592,8 +592,8 @@ future_ts = train_ts.make_future(48)
 
 #%%
 forecast_ts = model.forecast(
-    future_ts
-    # prediction_size=horizon
+    future_ts,
+    prediction_size=horizon
 )
 
 #%%
@@ -696,7 +696,7 @@ forecast_ts = model.forecast(future_ts)
 
 #%%
 # TODO cv - кастомная валидация
-cv = [[np.arange(0 + i * 456, 912 + i * 456), np.arange(0, 5618)] for i in range(8)]
+cv = [[np.arange(0 + i * 456, 912 + i * 456), np.arange(0, 5618)] for i in range(11)]
 # cv = [[np.arange(0 + i * 456, 912 + i * 456), np.arange(i * 456 + 912, i * 456 + 912 + 456)] for i in range(16)]
 
 # drop_folds = [0, 7, 3, 8, 13]
