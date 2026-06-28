@@ -27,7 +27,6 @@ import matplotlib
 matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt
 
-
 plt.style.use('seaborn-v0_8-bright')
 
 from etna.analysis import (
@@ -50,9 +49,12 @@ from etna.analysis import (
 from etna.datasets.tsdataset import TSDataset
 from etna.transforms import LinearTrendTransform, LagTransform, TimeSeriesImputerTransform
 from etna.models import NaiveModel, LinearPerSegmentModel, CatBoostPerSegmentModel, SeasonalMovingAverageModel
-from etna.metrics import MAE
+from etna.metrics import MAE, MAPE
+from etna.pipeline import Pipeline
+from etna.transforms import AddConstTransform
 
 
+#%%
 
 
 # TODO 1 часть: функции
@@ -61,7 +63,6 @@ def mean_abs_per_err(y_true, y_pred):
     Функция подсчета MAPE
     """
     return (abs((y_true - y_pred) / y_true)).mean() * 100
-
 
 
 def exponential_smoothing(series, alpha):
@@ -75,7 +76,6 @@ def exponential_smoothing(series, alpha):
         result.append(alpha * series[n] + (1 - alpha) * result[n - 1])
 
     return pd.Series(result)
-
 
 
 # TODO Кастомный ffill
@@ -148,7 +148,6 @@ def A_B_rate_restore(a_rate, b_rate, window, sigma):
     return pd.Series(result_a), pd.Series(result_b)
 
 
-
 def chemical_data_restore(series, window, window_mean, window_resid, sigma):
     """
     Функция, которая восстанавливает значения химических элементов
@@ -185,7 +184,7 @@ def chemical_data_restore(series, window, window_mean, window_resid, sigma):
     return pd.Series(result)
 
 
-
+#%%
 # TODO Восстановления процентов
 def restore_percent(data):
     """
@@ -211,6 +210,7 @@ def restore_percent(data):
     return data.iloc[:, :-2]
 
 
+#%%
 
 # TODO 2 часть: подготовка данных с новыми адаптивными сдвигами
 
@@ -234,7 +234,6 @@ data = pd.concat([data, raw_test], axis=0).reset_index(drop=True)
 # TODO features = raw_train + raw_targets + raw_test
 features = data.iloc[:, :10]
 targets = data.iloc[:, 10:]
-
 
 # TODO features
 start = time.time()
@@ -308,7 +307,6 @@ train = new_features.copy()
 # train_targets = new_targets.copy()
 
 
-
 # raw_train = pd.read_csv("D:\Eduson_data\sb_train_features.csv")
 # raw_test = pd.read_csv("D:\Eduson_data\sb_test_features.csv")
 # raw_targets = pd.read_csv("D:\Eduson_data\sb_train_targets.csv")
@@ -349,9 +347,6 @@ data = data.drop(trash_indexes, axis=0).reset_index(drop=True)
 raw_train = data.iloc[:, :10]
 raw_targets = data.iloc[:, 10:]
 
-
-
-
 trash_indexes = list()
 
 trash_indexes += raw_train[raw_train['A_C3H8'].isnull()].index.to_list()
@@ -384,7 +379,6 @@ trash_indexes += range(3638, 3641)
 trash_indexes += range(1341, 1349)
 trash_indexes += range(2835, 2837)
 
-
 # TODO Восстановление train и %
 
 start = time.time()
@@ -405,6 +399,7 @@ print(end - start)
 raw_train = restore_percent(raw_train)
 
 #%%
+# Удаляем trash index, делим data на train target
 final_train = raw_train.copy()
 final_targets = raw_targets.copy()
 
@@ -414,7 +409,6 @@ data = data.reset_index(drop=True)
 
 final_train = data.iloc[:, :10].copy()
 final_targets = data.iloc[:, 10:].copy()
-
 
 # TODO DROP Индекс timestamp
 #  isna()=0, final_train.shape(4112, 10), final_targets.shape(4112, 5)
@@ -430,35 +424,37 @@ final_targets = data.iloc[:, 10:]  # оставили timestamp
 # final_train['timestamp'] = final_train['timestamp'].astype('datetime64[ns]')  # str to datetime64
 # final_targets['timestamp'] = final_targets['timestamp'].astype('datetime64[ns]')  # str to datetime64
 
-#%%
 # TODO comb_data train
 comb_data = pd.merge(final_train, train, on='timestamp', how='left')
 
+# Индексы Не нулевых A_rate_y
 idx = comb_data[~comb_data['A_rate_y'].isnull()].index
 
 comb_train = final_train.iloc[:, :11].copy()
-comb_train.iloc[idx] = comb_data[~comb_data['A_rate_y'].isnull()].iloc[:, 10:]
 
+#  Переставим в comb_train  timestamp в начало таблицы
+cols = comb_train.drop('timestamp', axis=1).columns.to_list()
+cols_true = ['timestamp'] + cols
+comb_train = comb_train[cols_true]
+
+comb_train.iloc[idx] = comb_data[~comb_data['A_rate_y'].isnull()].iloc[:, 10:]
 final_train = comb_train.copy()
 
-#%%
 final_train['timestamp'] = final_train['timestamp'].astype('datetime64[ns]')  # str to datetime64
 final_targets['timestamp'] = final_targets['timestamp'].astype('datetime64[ns]')  # str to datetime64
 
+# final_targets = final_targets.iloc[:, :2]
 
 #%%
-# timestamp - в индекс для дальнейшего связывания индексов
+# timestamp - переводим в индекс для дальнейшего связывания индексов
 final_targets.set_index('timestamp', inplace=True)
 final_train.set_index('timestamp', inplace=True)
 # Связывание Индексов
 final_train.index = final_targets.index
 
-
-#%%
-# TODO Возвращаем timestamp из индекса в таблицу
+# Возвращаем timestamp из индекса в таблицу
 final_targets.reset_index(inplace=True)
 final_train.reset_index(inplace=True)
-
 
 #%%
 # TODO Явное Задание Частоты
@@ -538,6 +534,8 @@ final_targets["timestamp"].diff().value_counts().sort_index()
 #%%
 # TODO Приводим к формату etna train от target
 
+# final_train.drop(['A_rate', 'B_rate'], axis=1, inplace=True)
+
 df_regressors = final_train.melt(id_vars="timestamp", var_name="segment", value_name="target")
 df_to_forecast = final_targets.melt(id_vars="timestamp", var_name="segment", value_name="target")
 
@@ -549,6 +547,7 @@ ts = TSDataset(
     df_exog=df_regressors
 )
 
+#%%
 #%%
 # TODO EDA До преобразований
 ts.plot(figsize=(5, 3))
@@ -571,14 +570,14 @@ ts.plot(figsize=(5, 3))
 plt.show()
 
 #%%
-# TODO train_ts, test_ts
+# TODO horizon train_ts, test_ts
 
 # NaiveModel
-horizon = 48
+horizon = 3
 
 train_ts, test_ts = ts.train_test_split(test_size=horizon)
 
-
+#%%
 # TODO Проверка данных
 print(len(train_ts.to_pandas()))
 print(len(test_ts.to_pandas()))
@@ -596,119 +595,152 @@ print(test_ts.to_pandas().isna().sum().sum())
 # df = train_ts.to_pandas()
 # df[df.isna().any(axis=1)]
 
+#%%
+# TODO pipeline
+model = NaiveModel(lag=1)
+transforms = [AddConstTransform(in_column="target", value=1)]
+pipeline = Pipeline(model, transforms=transforms, horizon=3)
+pipeline.set_params(**{"model.lag": 3, "transforms.0.value": 2})
+Pipeline(model=NaiveModel(lag=3, ),
+         transforms=[AddConstTransform(in_column='target', value=2, inplace=True, out_column=None, )], horizon=3, )
+model = NaiveModel(lag=1)
+transforms = [
+    AddConstTransform(in_column="target", value=1)
+]
+pipeline = Pipeline(
+    model=model,
+    transforms=transforms,
+    horizon=3
+)
+pipeline.set_params(
+    **{
+        "model.lag": 3,
+        "transforms.0.value": 2
+    }
+)
+pipeline.fit(train_ts)
+forecast_ts = pipeline.forecast()
 
 #%%
 # TODO baisline NaiveModel
-model = NaiveModel(lag=1)
-
-model.fit(train_ts)
-
-future_ts = train_ts.make_future(48)
-
+# model = NaiveModel(lag=1)
+#
+# model.fit(train_ts)
+#
+# future_ts = train_ts.make_future(2)
+#
+# print(future_ts.to_pandas().isna().sum())
+# #%%
+# forecast_ts = model.forecast(
+#     future_ts,
+#     prediction_size=horizon
+# )
 
 #%%
-forecast_ts = model.forecast(
-    future_ts,
-    prediction_size=horizon
-)
+# TODO MAE MAPE
+mae = MAE()
 
+score_mae = mae(y_true=test_ts, y_pred=forecast_ts)
+
+print(score_mae)
+
+mape = MAPE()
+
+score_mape = mape(y_true=test_ts, y_pred=forecast_ts)
+
+print(score_mape)
 #%%
-metric = MAE()
-
-score = metric(y_true=test_ts, y_pred=forecast_ts)
-
-print(score)
-
 plot_forecast(
     forecast_ts=forecast_ts,
     test_ts=test_ts,
     train_ts=train_ts
 )
+plt.show()
 
 #%%
 
-horizon = 48
-
-model = SeasonalMovingAverageModel(window=24)
-
-model.fit(train_ts)
-
-future_ts = train_ts.make_future(horizon)
-
-forecast_ts = model.forecast(
-    future_ts,
-    prediction_size=horizon
-)
-
-#%%
-
-horizon = 48
-
-train_ts, test_ts = ts.train_test_split(test_size=horizon)
-
-# лаги (важно для линейной модели)
-transforms = [
-    LagTransform(in_column="target", lags=[1, 2, 3, 4, 5, 6, 12, 24])
-]
-
-model = LinearPerSegmentModel()
-
-model.fit(train_ts)
-
-future_ts = train_ts.make_future(horizon)
-
-forecast_ts = model.forecast(future_ts)
+# horizon = 2
+#
+# model = SeasonalMovingAverageModel(window=24)
+#
+# model.fit(train_ts)
+#
+# future_ts = train_ts.make_future(horizon)
+#
+# forecast_ts = model.forecast(
+#     future_ts,
+#     prediction_size=horizon
+# )
 
 #%%
-model = CatBoostPerSegmentModel()
 
-model.fit(train_ts)
+# horizon = 48
+#
+# train_ts, test_ts = ts.train_test_split(test_size=horizon)
+#
+# # лаги (важно для линейной модели)
+# transforms = [
+#     LagTransform(in_column="target", lags=[1, 2])
+# ]
+#
+# model = LinearPerSegmentModel()
+#
+# model.fit(train_ts)
+#
+# future_ts = train_ts.make_future(horizon)
+#
+# forecast_ts = model.forecast(future_ts)
 
-future_ts = train_ts.make_future(48)
-
-forecast_ts = model.forecast(future_ts)
+#%%
+# model = CatBoostPerSegmentModel()
+#
+# model.fit(train_ts)
+#
+# future_ts = train_ts.make_future(48)
+#
+# forecast_ts = model.forecast(future_ts)
 
 #%%
 # from etna.transforms import LagTransform, TimeSeriesImputerTransform
 # from etna.models import CatBoostPerSegmentModel
 
-horizon = 48
-
-train_ts, test_ts = ts.train_test_split(test_size=horizon)
-
-transforms = [
-    TimeSeriesImputerTransform(in_column="target"),
-    LagTransform(in_column="target", lags=[1, 2, 3, 4, 5, 6, 12, 24, 48])
-]
-
-model = CatBoostPerSegmentModel()
-
-model.fit(train_ts, transforms=transforms)
-
-future_ts = train_ts.make_future(horizon)
-
-forecast_ts = model.forecast(future_ts)
+# horizon = 48
+#
+# train_ts, test_ts = ts.train_test_split(test_size=horizon)
+#
+# transforms = [
+#     TimeSeriesImputerTransform(in_column="target"),
+#     LagTransform(in_column="target", lags=[1, 2, 3, 4, 5, 6, 12, 24, 48])
+# ]
+#
+# model = CatBoostPerSegmentModel()
+#
+# model.fit(train_ts, transforms=transforms)
+#
+# future_ts = train_ts.make_future(horizon)
+#
+# forecast_ts = model.forecast(future_ts)
 
 #%%
 
 # from etna.transforms import LagTransform
 # from etna.models import LinearPerSegmentModel
 
-horizon = 48
-
-train_ts, test_ts = ts.train_test_split(test_size=horizon)
-
-transforms = [
-    LagTransform(in_column="target", lags=[1, 2])
-]
-
-model = LinearPerSegmentModel()
-
-model.fit(train_ts, transforms=transforms)
-
-future_ts = train_ts.make_future(horizon)
-
-forecast_ts = model.forecast(future_ts)
+# horizon = 48
+#
+# train_ts, test_ts = ts.train_test_split(test_size=horizon)
+#
+# transforms = [
+#     LagTransform(in_column="target", lags=[1, 2])
+# ]
+#
+# model = LinearPerSegmentModel()
+#
+# model.fit(train_ts, transforms=transforms)
+#
+# future_ts = train_ts.make_future(horizon)
+#
+# forecast_ts = model.forecast(future_ts)
 
 #%%
 # TODO cv - кастомная валидация
@@ -745,7 +777,6 @@ for num, target in enumerate(final_targets.columns):
     res = pd.Series(np.zeros(final_train.shape[0]))
 
     for num, (train_idx, test_idx) in enumerate(cv):
-
         x_train = final_train.iloc[train_idx]
         x_test = final_train.iloc[test_idx]
         y_train = final_targets.iloc[train_idx][target]
