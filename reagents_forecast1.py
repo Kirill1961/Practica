@@ -530,64 +530,64 @@ final_targets["timestamp"].diff().value_counts().sort_index()
 
 #%%
 # TODO pipeline from Documentation
-df_regressors1 = final_train.melt(id_vars="timestamp", var_name="segment", value_name="target")
-df_to_forecast1 = final_targets.melt(id_vars="timestamp", var_name="segment", value_name="target")
-
-ts = TSDataset(
-    df=df_to_forecast1,
-    freq="30min",
-    df_exog=df_regressors1
-)
-
-horizon1 = 48
-
-train_ts1, test_ts1 = ts.train_test_split(test_size=horizon1)
-
-transforms = [
-    LagTransform(
-        in_column="target",
-        lags=[1, 2, 3, 4]
-    )
-]
-
-model = CatBoostPerSegmentModel()
-
-pipeline = Pipeline(
-    model=model,
-    transforms=transforms,
-    horizon=horizon1
-)
-
-pipeline.fit(train_ts1)
-
-forecast_ts1 = pipeline.forecast()
+# df_regressors1 = final_train.melt(id_vars="timestamp", var_name="segment", value_name="target")
+# df_to_forecast1 = final_targets.melt(id_vars="timestamp", var_name="segment", value_name="target")
+#
+# ts = TSDataset(
+#     df=df_to_forecast1,
+#     freq="30min",
+#     df_exog=df_regressors1
+# )
+#
+# horizon1 = 48
+#
+# train_ts1, test_ts1 = ts.train_test_split(test_size=horizon1)
+#
+# transforms = [
+#     LagTransform(
+#         in_column="target",
+#         lags=[1, 2, 3, 4]
+#     )
+# ]
+#
+# model = CatBoostPerSegmentModel()
+#
+# pipeline = Pipeline(
+#     model=model,
+#     transforms=transforms,
+#     horizon=horizon1
+# )
+#
+# pipeline.fit(train_ts1)
+#
+# forecast_ts1 = pipeline.forecast()
 
 #%%
 # TODO CatBoost MAE MAPE MSE
-mae = MAE()
-
-score_mae = mae(y_true=test_ts1, y_pred=forecast_ts1)
-
-print(score_mae)
-
-mape = MAPE()
-
-score_mape = mape(y_true=test_ts1, y_pred=forecast_ts1)
-
-print(score_mape)
-
-mse = MSE()
-
-score_mse = mse(y_true=test_ts1, y_pred=forecast_ts1)
-
-print(score_mse)
-
-loss_mape_total = [0]
-for component, loss in score_mape.items():
-    if component in ['B_C2H6', 'B_C3H8', 'B_iC4H10', 'B_nC4H10']:
-        print(component)
-        loss_mape_total += loss
-print(loss_mape_total)
+# mae = MAE()
+#
+# score_mae = mae(y_true=test_ts1, y_pred=forecast_ts1)
+#
+# print(score_mae)
+#
+# mape = MAPE()
+#
+# score_mape = mape(y_true=test_ts1, y_pred=forecast_ts1)
+#
+# print(score_mape)
+#
+# mse = MSE()
+#
+# score_mse = mse(y_true=test_ts1, y_pred=forecast_ts1)
+#
+# print(score_mse)
+#
+# loss_mape_total = [0]
+# for component, loss in score_mape.items():
+#     if component in ['B_C2H6', 'B_C3H8', 'B_iC4H10', 'B_nC4H10']:
+#         print(component)
+#         loss_mape_total += loss
+# print(loss_mape_total)
 
 #%%
 # TODO Edison NaiveModel

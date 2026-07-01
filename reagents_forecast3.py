@@ -49,14 +49,9 @@ from etna.analysis import (
 from etna.datasets.tsdataset import TSDataset
 from etna.transforms import LinearTrendTransform, LagTransform, TimeSeriesImputerTransform
 from etna.models import NaiveModel, LinearPerSegmentModel, CatBoostPerSegmentModel, SeasonalMovingAverageModel
-from etna.metrics import MAE, MAPE, MSE
+from etna.metrics import  MAPE
 from etna.pipeline import Pipeline
 from etna.transforms import AddConstTransform
-
-raw_targets = pd.read_csv('D:/Project_reagents/raw_targets.csv')
-raw_test = pd.read_csv('D:/Project_reagents/raw_test.csv')
-raw_train = pd.read_csv('D:/Project_reagents/raw_train.csv')
-
 
 # TODO 1 часть: функции
 def mape_loss(y_true, y_pred):
@@ -212,18 +207,31 @@ def restore_total_percent(data):
 
 # TODO 2 часть: подготовка данных с новыми адаптивными сдвигами
 
-raw_train.drop('timestamp', axis=1, inplace=True)
-raw_test.drop('timestamp', axis=1, inplace=True)
-# raw_targets.drop('timestamp', axis=1, inplace=True)
+# raw_targets = pd.read_csv('D:/Project_reagents/raw_targets.csv')
+# raw_test = pd.read_csv('D:/Project_reagents/raw_test.csv')
+# raw_train = pd.read_csv('D:/Project_reagents/raw_train.csv')
+#
+#
+# raw_train.drop('timestamp', axis=1, inplace=True)
+# raw_test.drop('timestamp', axis=1, inplace=True)
+# # # raw_targets.drop('timestamp', axis=1, inplace=True)
+#
+#
+# data = pd.concat([raw_train, raw_targets], axis=1)
+# data = pd.concat([data, raw_test], axis=0).reset_index(drop=True)
+#
+# data = data[2200:].reset_index(drop=True)
+#
+# data = pd.concat([data, raw_test], axis=0).reset_index(drop=True)
+#
+#
+# data.to_csv('D:/Project_reagents/data.csv', index=False)
 
+#%%
+# TODO dataset
+data = pd.read_csv('D:/Project_reagents/data.csv')
 
-data = pd.concat([raw_train, raw_targets], axis=1)
-data = pd.concat([data, raw_test], axis=0).reset_index(drop=True)
-
-data = data[2200:].reset_index(drop=True)
-
-data = pd.concat([data, raw_test], axis=0).reset_index(drop=True)
-
+data = data.copy()
 
 
 # TODO features = raw_train + raw_targets + raw_test
@@ -299,7 +307,7 @@ new_targets = data.iloc[:, 11:].reset_index(drop=True)
 
 train = new_features.copy()
 
-data = pd.concat([raw_train, raw_targets], axis=1)
+# data = pd.concat([raw_train, raw_targets], axis=1)
 
 trash_indexes = list()
 
